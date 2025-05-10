@@ -82,7 +82,7 @@ LOG_LEVEL=INFO
 | `LOG_LEVEL` | 日志级别 | `INFO` |
 | `LOG_FILE` | 日志文件路径 | douban-sync.log |
 | `DOUBAN_SYNC_TYPES` | 需要同步的内容类型，逗号分隔 | `movie,book` |
-| `SERVER_DOMAIN` | 服务域名，用于构建完整图片URL | - |
+| `SERVER_DOMAIN` | 服务域名 | - |
 | `COVER_DISPLAY_STRATEGY` | 封面显示策略 (local/original/mixed) | `mixed` |
 
 ## API 文档
