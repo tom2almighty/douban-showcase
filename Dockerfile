@@ -35,9 +35,7 @@ COPY .env .
 COPY src/ src/
 COPY run.py /app/run.py
 
-# 创建数据目录
-RUN mkdir -p data/covers
 
 EXPOSE 5000
 
-CMD ["python", "run.py --sync"]
+CMD ["python", "run.py", "--sync"]
