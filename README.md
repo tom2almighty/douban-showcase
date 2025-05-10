@@ -22,11 +22,68 @@
 3. 对于大量数据同步，建议使用增量同步 (`--sync-incremental`)，减少API负载
 4. 图片同步可能需要较长时间，可单独运行也可在应用启动时指定 `--sync-images`
 
-使用以下命令安装依赖：
+克隆项目后使用以下命令安装依赖：
 
 ```bash
 pip install flask requests python-dotenv retrying
 ```
+
+## 环境变量参考
+参考下面的环境变量配置：
+```env
+# 豆瓣API设置
+DOUBAN_USER_ID=123456789
+DOUBAN_API_HOST=frodo.douban.com
+DOUBAN_API_KEY=0ac44ae016490db2204ce0a042db2916
+AUTH_TOKEN= 
+
+SERVER_DOMAIN=http://localhost:5000
+
+# 同步支持的类型: movie, book, music, game, drama
+DOUBAN_SYNC_TYPES=movie,book  
+
+# API服务设置
+API_PORT=5000
+API_HOST=0.0.0.0
+
+# 时区设置
+TIMEZONE=Asia/Shanghai
+
+# 数据库设置
+SQLITE_DB_PATH=data/douban.db
+
+# 图片设置
+DOWNLOAD_COVERS=false
+LOCAL_COVER_PATH=data/covers
+# 图片展示策略: original(原始链接), local(本地缓存), mixed(混合模式)
+COVER_DISPLAY_STRATEGY=mixed
+# 图片代理设置 当图片展示策略为 original 或者 mixed时生效
+COVER_PROXY=false
+
+# 同步设置
+ENABLE_AUTO_SYNC=true
+SYNC_INTERVAL_HOURS=24
+
+# 日志设置
+LOG_FILE=data/douban-sync.log
+LOG_LEVEL=INFO
+```
+
+## 环境变量配置
+
+配置选项可通过环境变量设置或在 .env 文件中定义：
+
+| 环境变量 | 描述 | 默认值 |
+|---------|------|---------|
+| `DOUBAN_USER_ID` | 豆瓣用户ID | - |
+| `SQLITE_DB_PATH` | SQLite数据库路径 | douban.db |
+| `LOCAL_COVER_PATH` | 本地封面图片存储路径 | covers |
+| `DOWNLOAD_COVERS` | 是否下载封面图片 | `false` |
+| `LOG_LEVEL` | 日志级别 | `INFO` |
+| `LOG_FILE` | 日志文件路径 | douban-sync.log |
+| `DOUBAN_SYNC_TYPES` | 需要同步的内容类型，逗号分隔 | `movie,book` |
+| `SERVER_DOMAIN` | 服务域名，用于构建完整图片URL | - |
+| `COVER_DISPLAY_STRATEGY` | 封面显示策略 (local/original/mixed) | `mixed` |
 
 ## API 文档
 
@@ -123,20 +180,6 @@ python -m scripts.export_json --type book --db ./custom/path/douban.db
 ```
 
 
-## 环境变量配置
 
-配置选项可通过环境变量设置或在 .env 文件中定义：
-
-| 环境变量 | 描述 | 默认值 |
-|---------|------|---------|
-| `DOUBAN_USER_ID` | 豆瓣用户ID | - |
-| `SQLITE_DB_PATH` | SQLite数据库路径 | douban.db |
-| `LOCAL_COVER_PATH` | 本地封面图片存储路径 | covers |
-| `DOWNLOAD_COVERS` | 是否下载封面图片 | `false` |
-| `LOG_LEVEL` | 日志级别 | `INFO` |
-| `LOG_FILE` | 日志文件路径 | douban-sync.log |
-| `DOUBAN_SYNC_TYPES` | 需要同步的内容类型，逗号分隔 | `movie,book` |
-| `SERVER_DOMAIN` | 服务域名，用于构建完整图片URL | - |
-| `COVER_DISPLAY_STRATEGY` | 封面显示策略 (local/original/mixed) | `mixed` |
 
 
