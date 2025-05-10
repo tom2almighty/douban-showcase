@@ -1,0 +1,493 @@
+{% extends "base.html" %}
+
+{% block head %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold mb-2">豆瓣收藏 - 统计分析</h1>
+        <p class="text-gray-600 dark:text-gray-400">总收藏: {{ total_count }} 个条目</p>
+        
+        {% if load_time %}
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">数据加载用时: {{ load_time }}秒</p>
+        {% endif %}
+
+        <!-- 操作按钮区 -->
+        <div class="mt-4">
+            <a href="{{ url_for('frontend.stats', refresh=1) }}" 
+               class="inline-flex items-center px-3 py-2 bg-primary-600 text-white text-sm font-medium rounded hover:bg-primary-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                </svg>
+                刷新数据
+            </a>
+        </div>
+    </div>
+
+    <!-- 内容类型分布 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- 内容类型分布 - 饼图 -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h2 class="text-lg font-bold mb-4">内容类型分布</h2>
+            <div style="height: 300px;">
+                <canvas id="typeChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 完成状态分布 - 饼图 -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h2 class="text-lg font-bold mb-4">状态分布</h2>
+            <div style="height: 300px;">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- 评分分布 -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h2 class="text-lg font-bold mb-4">评分分布</h2>
+        <div class="flex items-center mb-4">
+            <div class="mr-8">
+                <p class="text-3xl font-bold">{{ rating_stats.average }}</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">平均评分</p>
+            </div>
+            <div>
+                <p class="text-xl font-bold">{{ rating_stats.count }}</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">评分总数</p>
+            </div>
+        </div>
+        <div style="height: 250px;">
+            <canvas id="ratingChart"></canvas>
+        </div>
+    </div>
+
+    <!-- 历年收藏趋势 -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h2 class="text-lg font-bold mb-4">历年收藏趋势</h2>
+        <div style="height: 300px;">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+
+    <!-- 年份分布 -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h2 class="text-lg font-bold mb-4">作品年份分布</h2>
+        <div style="height: 250px;">
+            <canvas id="yearChart"></canvas>
+        </div>
+    </div>
+
+    <!-- 标签词云 -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h2 class="text-lg font-bold mb-4">热门标签</h2>
+        <div style="height: 400px;">
+            <canvas id="tagCloud"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 设置Chart.js默认选项
+Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+Chart.defaults.color = document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#374151';
+Chart.defaults.scale.grid.color = document.documentElement.classList.contains('dark') ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+
+// 获取暗色模式状态
+const isDarkMode = document.documentElement.classList.contains('dark');
+const defaultTextColor = isDarkMode ? '#e5e7eb' : '#374151';
+const defaultBorderColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+
+// 设置颜色方案
+const typeColors = [
+    'rgba(59, 162, 114, 0.8)',  // 绿色
+    'rgba(78, 121, 167, 0.8)',  // 蓝色
+    'rgba(242, 142, 44, 0.8)',  // 橙色
+    'rgba(225, 87, 89, 0.8)',   // 红色
+    'rgba(118, 183, 178, 0.8)', // 青色
+    'rgba(89, 161, 79, 0.8)',   // 草绿色
+    'rgba(140, 86, 75, 0.8)',   // 棕色
+    'rgba(227, 119, 194, 0.8)'  // 粉色
+];
+
+const statusColors = {
+    'done': 'rgba(59, 162, 114, 0.8)',  // 绿色
+    'doing': 'rgba(78, 121, 167, 0.8)', // 蓝色
+    'wish': 'rgba(242, 142, 44, 0.8)'   // 橙色
+};
+
+// 1. 内容类型分布图
+const typeCtx = document.getElementById('typeChart').getContext('2d');
+const typeData = {
+    labels: Object.keys({{ type_counts|tojson }}).map(type => {
+        const typeNames = {
+            'movie': '电影',
+            'tv': '电视剧',
+            'book': '图书',
+            'music': '音乐',
+            'game': '游戏',
+            'drama': '舞台剧'
+        };
+        return typeNames[type] || type;
+    }),
+    datasets: [{
+        data: Object.values({{ type_counts|tojson }}),
+        backgroundColor: typeColors,
+        borderWidth: 1,
+        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.1)'
+    }]
+};
+const typeChart = new Chart(typeCtx, {
+    type: 'doughnut',
+    data: typeData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'right',
+                labels: {
+                    padding: 15,
+                    usePointStyle: true,
+                    pointStyle: 'circle',
+                    color: defaultTextColor
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const label = context.label || '';
+                        const value = context.parsed || 0;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = Math.round((value / total) * 100);
+                        return `${label}: ${value} (${percentage}%)`;
+                    }
+                }
+            }
+        }
+    }
+});
+
+// 2. 状态分布图
+const statusCtx = document.getElementById('statusChart').getContext('2d');
+const statusData = {
+    labels: Object.keys({{ status_counts|tojson }}).map(status => {
+        const statusNames = {
+            'done': '看过',
+            'doing': '在看',
+            'wish': '想看'
+        };
+        return statusNames[status] || status;
+    }),
+    datasets: [{
+        data: Object.values({{ status_counts|tojson }}),
+        backgroundColor: Object.keys({{ status_counts|tojson }}).map(status => statusColors[status] || 'rgba(150, 150, 150, 0.8)'),
+        borderWidth: 1,
+        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.1)'
+    }]
+};
+const statusChart = new Chart(statusCtx, {
+    type: 'pie',
+    data: statusData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'right',
+                labels: {
+                    padding: 15,
+                    usePointStyle: true,
+                    pointStyle: 'circle',
+                    color: defaultTextColor
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const label = context.label || '';
+                        const value = context.parsed || 0;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = Math.round((value / total) * 100);
+                        return `${label}: ${value} (${percentage}%)`;
+                    }
+                }
+            }
+        }
+    }
+});
+
+// 3. 评分分布图
+const ratingCtx = document.getElementById('ratingChart').getContext('2d');
+const ratingLabels = Array.from({length: 10}, (_, i) => (i + 1).toString());
+const ratingData = {
+    labels: ratingLabels,
+    datasets: [{
+        label: '评分数量',
+        data: {{ rating_distribution|tojson }},
+        backgroundColor: 'rgba(59, 162, 114, 0.6)',
+        borderColor: 'rgba(59, 162, 114, 1)',
+        borderWidth: 1
+    }]
+};
+const ratingChart = new Chart(ratingCtx, {
+    type: 'bar',
+    data: ratingData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    color: defaultTextColor
+                },
+                grid: {
+                    color: defaultBorderColor
+                }
+            },
+            x: {
+                ticks: {
+                    color: defaultTextColor
+                },
+                grid: {
+                    display: false
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    title: function(tooltipItems) {
+                        return `${tooltipItems[0].label} 分`;
+                    }
+                }
+            }
+        }
+    }
+});
+
+// 4. 历年收藏趋势图
+const trendCtx = document.getElementById('trendChart').getContext('2d');
+const trendData = {
+    labels: {{ trend_data.labels|tojson }},
+    datasets: [{
+        label: '收藏数量',
+        data: {{ trend_data['values']|tojson }},
+        backgroundColor: 'rgba(78, 121, 167, 0.2)',
+        borderColor: 'rgba(78, 121, 167, 1)',
+        borderWidth: 2,
+        pointBackgroundColor: 'rgba(78, 121, 167, 1)',
+        tension: 0.3,
+        fill: true
+    }]
+};
+const trendChart = new Chart(trendCtx, {
+    type: 'line',
+    data: trendData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    color: defaultTextColor
+                },
+                grid: {
+                    color: defaultBorderColor
+                }
+            },
+            x: {
+                ticks: {
+                    color: defaultTextColor,
+                    maxRotation: 45,
+                    minRotation: 45
+                },
+                grid: {
+                    color: defaultBorderColor
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+
+// 5. 年份分布图
+const yearCtx = document.getElementById('yearChart').getContext('2d');
+const yearData = {
+    labels: {{ year_data.labels|tojson }},
+    datasets: [{
+        label: '作品数量',
+        data: {{ year_data.all|tojson }},
+        backgroundColor: 'rgba(242, 142, 44, 0.6)',
+        borderColor: 'rgba(242, 142, 44, 1)',
+        borderWidth: 1
+    }]
+};
+const yearChart = new Chart(yearCtx, {
+    type: 'bar',
+    data: yearData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    color: defaultTextColor
+                },
+                grid: {
+                    color: defaultBorderColor
+                }
+            },
+            x: {
+                ticks: {
+                    color: defaultTextColor,
+                    maxRotation: 90,
+                    minRotation: 45,
+                    autoSkip: true,
+                    maxTicksLimit: 20
+                },
+                grid: {
+                    display: false
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+
+// 6. 标签词云
+{% if top_tags is defined and top_tags %}
+    const tagDataRaw = {{ top_tags|tojson|safe }};
+    
+    if (typeof Chart.controllers.wordCloud !== 'undefined' && tagDataRaw && tagDataRaw.length > 0) {
+        const tagCtx = document.getElementById('tagCloud').getContext('2d');
+        
+        // 预处理数据，防止出现非字符串或其他错误
+        const safeTagData = {
+            labels: tagDataRaw.map(tag => String(tag.name || '')),
+            datasets: [{
+                data: tagDataRaw.map(tag => Number(tag.weight || 1))
+            }]
+        };
+        
+        const tagCloud = new Chart(tagCtx, {
+            type: 'wordCloud',
+            data: safeTagData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const index = context.dataIndex;
+                                if (index >= 0 && index < tagDataRaw.length) {
+                                    const tag = tagDataRaw[index];
+                                    return `${tag.name}: ${tag.count} 次使用`;
+                                }
+                                return '';
+                            }
+                        }
+                    }
+                },
+                wordCloud: {
+                    minRotation: -30,
+                    maxRotation: 30,
+                    color: function(context) {
+                        const value = context.dataset.data[context.dataIndex] || 0;
+                        const colors = [
+                            'rgba(59, 162, 114, 1)',   // 绿色
+                            'rgba(78, 121, 167, 1)',   // 蓝色
+                            'rgba(242, 142, 44, 1)',   // 橙色
+                            'rgba(225, 87, 89, 1)',    // 红色
+                            'rgba(118, 183, 178, 1)'   // 青色
+                        ];
+                        // 根据权重选择颜色
+                        const index = Math.min(Math.floor(value / 20), colors.length - 1);
+                        return colors[Math.max(0, index)];
+                    }
+                }
+            }
+        });
+    } else {
+        // 如果词云插件不可用或没有标签数据，使用普通标签展示
+        let tagsHtml = '';
+        
+        if (tagDataRaw && tagDataRaw.length > 0) {
+            // 有标签数据，生成HTML
+            tagDataRaw.forEach(tag => {
+                const tagName = String(tag.name || '');
+                const tagCount = Number(tag.count || 0);
+                const tagWeight = Number(tag.weight || 1);
+                const fontSize = 10 + tagWeight/10;
+                
+                tagsHtml += `<div class="px-3 py-2 rounded-full text-center m-1" 
+                    style="background-color: rgba(78, 121, 167, 0.2); font-size: ${fontSize}px;">
+                    ${tagName} (${tagCount})
+                </div>`;
+            });
+        } else {
+            // 没有标签数据
+            tagsHtml = '<div class="text-center text-gray-500 dark:text-gray-400">暂无标签数据</div>';
+        }
+        
+        document.getElementById('tagCloud').outerHTML = `
+            <div class="flex flex-wrap gap-3 py-8">${tagsHtml}</div>
+        `;
+    }
+{% else %}
+    // 没有标签数据
+    document.getElementById('tagCloud').outerHTML = `
+        <div class="p-4 text-center text-gray-500 dark:text-gray-400">
+            暂无标签数据
+        </div>
+    `;
+{% endif %}
+
+// 监听主题切换，更新图表颜色
+// 监听主题切换事件（示例）
+const darkModeToggle = document.querySelector('#dark-mode-toggle');
+if (darkModeToggle) {
+    darkModeToggle.addEventListener('change', (e) => {
+        const isDark = e.target.checked;
+        // 更新所有图表的颜色配置
+        updateChartColors(isDark);
+    });
+}
+
+function updateChartColors(isDark) {
+    const textColor = isDark ? '#e5e7eb' : '#374151';
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    
+    // 更新所有图表的配置
+    [typeChart, statusChart, ratingChart, trendChart, yearChart].forEach(chart => {
+        chart.options.scales.x.ticks.color = textColor;
+        chart.options.scales.y.ticks.color = textColor;
+        chart.options.scales.x.grid.color = gridColor;
+        chart.options.scales.y.grid.color = gridColor;
+        chart.update();
+    });
+}
+</script>
+{% endblock %}

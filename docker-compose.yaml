@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  douban-showcase:
+    image: tom2al/douban-showcase
+    container_name: douban-showcase
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./.env:/app/.env
+      - ./data:/app/data
+    restart: unless-stopped

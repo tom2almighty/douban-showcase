@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-md mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+    <div class="text-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <h1 class="text-2xl font-bold mt-4 text-gray-800 dark:text-gray-100">出错了</h1>
+        <p class="text-gray-600 dark:text-gray-300 mt-2">{{ message }}</p>
+        
+        {% if error_details %}
+        <div class="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded text-sm text-left overflow-x-auto">
+            <pre class="whitespace-pre-wrap">{{ error_details }}</pre>
+        </div>
+        {% endif %}
+        
+        <div class="mt-6">
+            <a href="{{ url_for('frontend.index') }}" class="inline-block px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors">
+                返回首页
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
