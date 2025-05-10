@@ -42,5 +42,3 @@ jobs:
             ${{ env.DOCKERHUB_USER }}/${{ env.IMAGE_NAME }}:latest
             ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
