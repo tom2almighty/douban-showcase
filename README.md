@@ -179,7 +179,8 @@ python -m scripts.export_json --type movie --compact
 python -m scripts.export_json --type book --db ./custom/path/douban.db
 ```
 
-
+## 免责声明
+此项目（包括但不限于代码、文档、资源文件等）仅限用于个人学习、研究目的，如发现存在无意侵权的内容，请联系作者删除。
 
 
 
