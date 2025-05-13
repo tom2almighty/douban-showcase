@@ -4,3 +4,6 @@ douban.db
 douban.db-shm
 douban.db-wal
 douban-sync.log
+package.json
+package-lock.json
+tailwind.config.js
