@@ -3,11 +3,11 @@
      x-data="{ showDetails: false }">
     
     <!-- 封面图容器：固定比例 -->
-    <a href="{{ item.url }}"
-       target="_blank"
-       class="block relative aspect-[2/3] w-full"
-       @mouseenter="showDetails = true" 
-       @mouseleave="showDetails = false">
+    <div class="block relative aspect-[2/3] w-full"
+       class="cursor-pointer"
+       @mouseenter.debounce.50="if(window.innerWidth >= 768) showDetails = true" 
+       @mouseleave.debounce.50="if(window.innerWidth >= 768) showDetails = false"
+       @click="if(window.innerWidth < 768) showDetails = !showDetails">
         
         <!-- 封面图 -->
         <img src="{{ item|image_url }}" 
@@ -16,7 +16,6 @@
              class="w-full h-full object-cover"
              loading="lazy">
             
-             
         <!-- 悬浮时显示的信息卡 -->
         <div x-show="showDetails" 
              x-cloak
@@ -28,8 +27,12 @@
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0">
             
-            <!-- 标题 -->
-            <h3 class="text-lg font-bold mb-2 line-clamp-2">{{ item.title }}</h3>
+            <!-- 标题 (添加链接) -->
+            <a href="{{ item.url }}" 
+               target="_blank" 
+               class="hover:text-blue-300">
+                <h3 class="text-lg font-bold mb-2 line-clamp-2">{{ item.title }}</h3>
+            </a>
             
             <!-- card_subtitle (显示导演、演员或作者信息) -->
             {% if item.card_subtitle %}
@@ -99,7 +102,7 @@
             </div>
             {% endif %}
         </div>
-    </a>
+    </div>
     
     <!-- 卡片底部，始终显示 -->
     <div class="p-3">
