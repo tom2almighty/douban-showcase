@@ -1,6 +1,5 @@
 @import "tailwindcss";
-
-/* 其它自定义样式保持不变 */
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* 自定义评分星星组件样式 */
 .rating .allstardark {

@@ -1,6 +1,48 @@
 <!DOCTYPE html>
-<html lang="zh-CN" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true' }" 
-      :class="{ 'dark': darkMode }">
+<html lang="zh-CN" 
+    x-data="{ 
+        darkMode: localStorage.theme === 'dark' || 
+                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches),
+        themeMenuOpen: false,
+        currentThemeMode: localStorage.theme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'system' : 'system'),
+        
+        // 修改切换主题的方法
+        toggleTheme(mode) {
+            if (mode === 'dark') {
+                this.darkMode = true;
+                localStorage.theme = 'dark';
+                this.currentThemeMode = 'dark';
+            } else if (mode === 'light') {
+                this.darkMode = false;
+                localStorage.theme = 'light';
+                this.currentThemeMode = 'light';
+            } else {
+                // 跟随系统
+                localStorage.removeItem('theme');
+                this.darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                this.currentThemeMode = 'system';
+            }
+            
+            // 更新DOM
+            if (this.darkMode) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            
+            // 关闭菜单
+            this.themeMenuOpen = false;
+        },
+        
+        // 初始化当前主题模式
+        initThemeMode() {
+            if ('theme' in localStorage) {
+                return localStorage.theme;
+            }
+            return 'system';
+        }
+    }"
+    @x-init="currentThemeMode = initThemeMode()"
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,13 +52,49 @@
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/static/favicon.png">
     
-    {# <script>
-        // 检查操作系统偏好主题
-        if (!localStorage.getItem('darkMode')) {
-            let isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            localStorage.setItem('darkMode', isDarkMode ? 'true' : 'false');
+    <script>
+        if (localStorage.theme === 'dark' ||
+            (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
         }
-    </script> #}
+        
+
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (!('theme' in localStorage)) {
+                if (event.matches) {
+                    document.documentElement.classList.add('dark');
+                    if (window.Alpine) {
+                        document.querySelectorAll('[x-data]').forEach(el => {
+                            if (el.__x) {
+                                const data = el.__x.getUnobservedData();
+                                data.darkMode = true;
+                                if (data.currentThemeMode === 'system') {
+                                    // 仅在跟随系统模式下更新
+                                    data.darkMode = true;
+                                }
+                            }
+                        });
+                    }
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    if (window.Alpine) {
+                        document.querySelectorAll('[x-data]').forEach(el => {
+                            if (el.__x) {
+                                const data = el.__x.getUnobservedData();
+                                data.darkMode = false;
+                                if (data.currentThemeMode === 'system') {
+                                    // 仅在跟随系统模式下更新
+                                    data.darkMode = false;
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        });
+    </script>
 
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -33,7 +111,6 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
     
-    <!-- 页面特定的头部内容 -->
     {% block head %}{% endblock %}
 </head>
 
@@ -46,7 +123,7 @@
                 <div class="flex items-center space-x-2">
                     <a href="{{ url_for('frontend.index') }}" class="flex items-center">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
                         </svg>
                         <span class="text-xl font-bold ml-2">豆瓣收藏</span>
                     </a>
@@ -71,16 +148,77 @@
                 <!-- 移动端菜单按钮和主题切换 -->
                 <div class="flex items-center space-x-2">
                     <!-- 主题切换按钮 -->
-                    <button @click="darkMode = !darkMode; $nextTick(() => localStorage.setItem('darkMode', darkMode ? 'true' : 'false'))" 
-                        class="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
+                    <div class="relative">
+                        <button @click="themeMenuOpen = !themeMenuOpen"
+                                class="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none flex items-center space-x-1">
+                            <!-- 当前主题图标 -->
+                            <template x-if="currentThemeMode === 'light'">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                                </svg>
+                            </template>
+                            <template x-if="currentThemeMode === 'dark'">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                                </svg>
+                            </template>
+                            <template x-if="currentThemeMode === 'system'">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                            </template>
+                            
+                            <!-- 下拉箭头 -->
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
                         
-                    <svg x-show="!darkMode" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                    </svg>
-                    <svg x-show="darkMode" x-cloak xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                </button>
+                        <!-- 主题选择下拉菜单 -->
+                        <div x-show="themeMenuOpen" 
+                             @click.away="themeMenuOpen = false"
+                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter-start="opacity-0 transform scale-95"
+                             x-transition:enter-end="opacity-100 transform scale-100"
+                             x-transition:leave="transition ease-in duration-150"
+                             x-transition:leave-start="opacity-100 transform scale-100"
+                             x-transition:leave-end="opacity-0 transform scale-95"
+                             class="absolute right-0 mt-2 w-48 py-2 bg-white dark:bg-gray-800 rounded-md shadow-lg z-50">
+                            
+                            <!-- 亮色模式选项 -->
+                            <button @click="toggleTheme('light')" class="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                                </svg>
+                                亮色模式
+                                <svg x-show="currentThemeMode === 'light'" class="h-5 w-5 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </button>
+
+                            <!-- 暗色模式选项 -->
+                            <button @click="toggleTheme('dark')" class="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                                </svg>
+                                暗色模式
+                                <svg x-show="currentThemeMode === 'dark'" class="h-5 w-5 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </button>
+
+                            <!-- 跟随系统选项 -->
+                            <button @click="toggleTheme('system')" class="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                                跟随系统
+                                <svg x-show="currentThemeMode === 'system'" class="h-5 w-5 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
 
 
                     <!-- 移动端菜单按钮 -->
@@ -133,9 +271,6 @@
             </div>
         </footer>
     </div>
-
-    <!-- 主题切换逻辑 -->
-
 
     <!-- 页面特定的脚本 -->
     {% block scripts %}{% endblock %}
