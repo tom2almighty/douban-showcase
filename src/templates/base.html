@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh-CN" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true' }" 
-      :class="{ 'dark': darkMode }">
+<html lang="zh-CN" 
+      x-data="{ 
+          darkMode: localStorage.getItem('darkMode') === 'true' || (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      }">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,13 +12,15 @@
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/static/favicon.png">
     
-    {# <script>
-        // 检查操作系统偏好主题
-        if (!localStorage.getItem('darkMode')) {
-            let isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            localStorage.setItem('darkMode', isDarkMode ? 'true' : 'false');
+    <script>
+        // 在页面加载时立即执行
+        if (localStorage.getItem('darkMode') === 'true' ||
+            (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
         }
-    </script> #}
+    </script>
 
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -46,7 +50,7 @@
                 <div class="flex items-center space-x-2">
                     <a href="{{ url_for('frontend.index') }}" class="flex items-center">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
                         </svg>
                         <span class="text-xl font-bold ml-2">豆瓣收藏</span>
                     </a>
@@ -71,8 +75,10 @@
                 <!-- 移动端菜单按钮和主题切换 -->
                 <div class="flex items-center space-x-2">
                     <!-- 主题切换按钮 -->
-                    <button @click="darkMode = !darkMode; $nextTick(() => localStorage.setItem('darkMode', darkMode ? 'true' : 'false'))" 
-                        class="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
+                    <button @click="darkMode = !darkMode; 
+                localStorage.setItem('darkMode', darkMode);
+                    darkMode ? document.documentElement.classList.add('dark') : document.documentElement.classList.remove('dark')" 
+                    class="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
                         
                     <svg x-show="!darkMode" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
