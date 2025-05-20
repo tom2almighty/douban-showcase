@@ -6,7 +6,7 @@
 - Python
 - Flask
 - Alpine.js
-- taiwindCSS
+- TailwindCSS
 
 ## 特点
 - 支持多种类型条目：movie、book、game、music、drama
