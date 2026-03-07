@@ -1,4 +1,8 @@
 # douban-showcase
+
+>[!IMPORTANT]
+> 不在维护，现在使用 [WatchLog](https://github.com/tom2almighty/watchlog)
+
 ## 项目描述
 豆瓣个人标记数据展示。
 
